@@ -191,6 +191,23 @@ def render_all():
 
     libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
 
+def player_attack_or_move(dx, dy):
+    global fov_recompute
+    x = player.x + dx
+    y = player.y + dy
+
+    target = None
+    for object in objects:
+        if object.x == x and object.y == y:
+            target = object
+            break
+
+    if target is not None:
+        print('The ' + target.name + ' laughs at your puny efforts to attack him!')
+    else:
+        player.move(dx, dy)
+        fov_recompute = True
+
 def handle_keys():
     global fov_recompute
 
@@ -201,17 +218,13 @@ def handle_keys():
         return 'exit'
     if game_state == 'playing':
         if libtcod.console_is_key_pressed(libtcod.KEY_UP):
-            player.move(0, -1)
-            fov_recompute = True
+            player_attack_or_move(0, -1)
         elif libtcod.console_is_key_pressed(libtcod.KEY_DOWN):
-            player.move(0, 1)
-            fov_recompute = True
+            player_attack_or_move(0, 1)
         elif libtcod.console_is_key_pressed(libtcod.KEY_LEFT):
-            player.move(-1, 0)
-            fov_recompute = True
+            player_attack_or_move(-1, 0)
         elif libtcod.console_is_key_pressed(libtcod.KEY_RIGHT):
-            player.move(1, 0)
-            fov_recompute = True
+            player_attack_or_move(1, 0)
         else:
             return 'didnt-take-turn'
 
@@ -246,3 +259,8 @@ while not libtcod.console_is_window_closed():
     player_action = handle_keys()
     if player_action == 'exit':
         break
+
+    if game_state == 'playing' and player_action != 'didnt-take-turn':
+        for object in objects:
+            if object != player and libtcod.map_is_in_fov(fov_map, object.x, object.y):
+                print('The ' + object.name + ' growls!')
