@@ -26,14 +26,16 @@ color_light_ground = libtcod.Color(200, 180, 50)
 con = libtcod.console_new(SCREEN_WIDTH, SCREEN_HEIGHT)
 
 class Object:
-    def __init__(self, x, y, char, color):
+    def __init__(self, x, y, char, name, color, blocks=False):
         self.x = x
         self.y = y
         self.char = char
         self.color = color
+        self.name = name
+        self.blocks = blocks
 
     def move(self, dx, dy):
-        if not map[self.x + dx][self.y + dy].blocked:
+        if not is_blocked(self.x + dx, self.y + dy):
             self.x += dx
             self.y += dy
 
@@ -96,11 +98,22 @@ def place_objects(room):
     for i in range(num_monsters):
         x = libtcod.random_get_int(0, room.x1, room.x2)
         y = libtcod.random_get_int(0, room.y1, room.y2)
-        if libtcod.random_get_int(0, 0, 100) < 80:
-            monster = Object(x, y, 'o', libtcod.desaturated_green)
-        else:
-            monster = Object(x, y, 'T', libtcod.darker_green)
-        objects.append(monster)
+        if not is_blocked(x, y):
+            if libtcod.random_get_int(0, 0, 100) < 80:
+                monster = Object(x, y, 'o', 'orc', libtcod.desaturated_green, True)
+            else:
+                monster = Object(x, y, 'T', 'troll', libtcod.darker_green, True)
+            objects.append(monster)
+
+def is_blocked(x, y):
+    if map[x][y].blocked:
+        return True
+
+    for object in objects:
+        if object.blocks and object.x == x and object.y == y:
+            return True
+
+    return False
 
 def make_map():
     global map
@@ -204,7 +217,7 @@ libtcod.console_set_custom_font('arial10x10.png', libtcod.FONT_TYPE_GREYSCALE | 
 libtcod.console_init_root(SCREEN_WIDTH, SCREEN_HEIGHT, 'python/libtcod-tutorial', False)
 libtcod.sys_set_fps(LIMIT_FPS)
 
-player = Object(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, '@', libtcod.white)
+player = Object(0, 0, '@', 'player', libtcod.white, blocks=True)
 objects = [player]
 
 make_map()
