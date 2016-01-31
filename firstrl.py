@@ -194,24 +194,26 @@ def render_all():
 def handle_keys():
     global fov_recompute
 
-    key = libtcod.console_check_for_keypress()
+    key = libtcod.console_wait_for_keypress(True)
     if key.vk == libtcod.KEY_F5:
         libtcod.console_set_fullscreen(not libtcod.console_is_fullscreen())
     elif key.vk == libtcod.KEY_ESCAPE:
-        return True
-
-    if libtcod.console_is_key_pressed(libtcod.KEY_UP):
-        player.move(0, -1)
-        fov_recompute = True
-    elif libtcod.console_is_key_pressed(libtcod.KEY_DOWN):
-        player.move(0, 1)
-        fov_recompute = True
-    elif libtcod.console_is_key_pressed(libtcod.KEY_LEFT):
-        player.move(-1, 0)
-        fov_recompute = True
-    elif libtcod.console_is_key_pressed(libtcod.KEY_RIGHT):
-        player.move(1, 0)
-        fov_recompute = True
+        return 'exit'
+    if game_state == 'playing':
+        if libtcod.console_is_key_pressed(libtcod.KEY_UP):
+            player.move(0, -1)
+            fov_recompute = True
+        elif libtcod.console_is_key_pressed(libtcod.KEY_DOWN):
+            player.move(0, 1)
+            fov_recompute = True
+        elif libtcod.console_is_key_pressed(libtcod.KEY_LEFT):
+            player.move(-1, 0)
+            fov_recompute = True
+        elif libtcod.console_is_key_pressed(libtcod.KEY_RIGHT):
+            player.move(1, 0)
+            fov_recompute = True
+        else:
+            return 'didnt-take-turn'
 
 libtcod.console_set_custom_font('arial10x10.png', libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD)
 libtcod.console_init_root(SCREEN_WIDTH, SCREEN_HEIGHT, 'python/libtcod-tutorial', False)
@@ -229,6 +231,9 @@ for y in range(MAP_HEIGHT):
 
 fov_recompute = True
 
+game_state = 'playing'
+player_action = None
+
 #game loop
 while not libtcod.console_is_window_closed():
     render_all()
@@ -238,6 +243,6 @@ while not libtcod.console_is_window_closed():
     for object in objects:
         object.clear()
 
-    exit = handle_keys()
-    if exit:
+    player_action = handle_keys()
+    if player_action == 'exit':
         break
