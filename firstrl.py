@@ -26,13 +26,20 @@ color_light_ground = libtcod.Color(200, 180, 50)
 con = libtcod.console_new(SCREEN_WIDTH, SCREEN_HEIGHT)
 
 class Object:
-    def __init__(self, x, y, char, name, color, blocks=False):
+    def __init__(self, x, y, char, name, color, blocks=False, fighter = None, ai = None):
         self.x = x
         self.y = y
         self.char = char
         self.color = color
         self.name = name
         self.blocks = blocks
+        self.fighter = fighter
+        if self.fighter:
+            self.fighter.owner = self
+
+        self.ai = ai
+        if self.ai:
+            self.ai.owner = self
 
     def move(self, dx, dy):
         if not is_blocked(self.x + dx, self.y + dy):
@@ -46,6 +53,17 @@ class Object:
 
     def clear(self):
         libtcod.console_put_char(con, self.x, self.y, ' ', libtcod.BKGND_NONE)
+
+class Fighter:
+    def __init__(self, hp, defense, power):
+        self.max_hp = hp
+        self.hp = hp
+        self.defense = defense
+        self.power = power
+
+class BasicMonster:
+    def take_turn(self):
+        print('The ' + self.owner.name + ' growls!')
 
 class Tile:
     def __init__(self, blocked, block_sight = None):
@@ -100,9 +118,13 @@ def place_objects(room):
         y = libtcod.random_get_int(0, room.y1, room.y2)
         if not is_blocked(x, y):
             if libtcod.random_get_int(0, 0, 100) < 80:
-                monster = Object(x, y, 'o', 'orc', libtcod.desaturated_green, True)
+                fighter_component = Fighter(hp=10, defense=0, power=3)
+                ai_component = BasicMonster()
+                monster = Object(x, y, 'o', 'orc', libtcod.desaturated_green, blocks=True, fighter=fighter_component, ai=ai_component)
             else:
-                monster = Object(x, y, 'T', 'troll', libtcod.darker_green, True)
+                fighter_component = Fighter(hp=16, defense=1, power=4)
+                ai_component = BasicMonster()
+                monster = Object(x, y, 'T', 'troll', libtcod.darker_green, blocks=True, fighter=fighter_component, ai=ai_component)
             objects.append(monster)
 
 def is_blocked(x, y):
@@ -232,7 +254,8 @@ libtcod.console_set_custom_font('arial10x10.png', libtcod.FONT_TYPE_GREYSCALE | 
 libtcod.console_init_root(SCREEN_WIDTH, SCREEN_HEIGHT, 'python/libtcod-tutorial', False)
 libtcod.sys_set_fps(LIMIT_FPS)
 
-player = Object(0, 0, '@', 'player', libtcod.white, blocks=True)
+fighter_component = Fighter(hp=30, defense=2, power=5)
+player = Object(0, 0, '@', 'player', libtcod.white, blocks=True, fighter=fighter_component)
 objects = [player]
 
 make_map()
