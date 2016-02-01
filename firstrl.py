@@ -1,4 +1,5 @@
 import libtcodpy as libtcod
+import math
 
 #init stuff
 SCREEN_WIDTH = 80
@@ -46,6 +47,19 @@ class Object:
             self.x += dx
             self.y += dy
 
+    def move_towards(self, target_x, target_y):
+        dx = target_x - self.x
+        dy = target_y - self.y
+        distance = math.sqrt(dx ** 2 + dy ** 2)
+        dx = int(round(dx / distance))
+        dy = int(round(dy / distance))
+        self.move(dx, dy)
+
+    def distance_to(self, other):
+        dx = other.x - self.x
+        dy = other.y - self.y
+        return math.sqrt(dx ** 2 + dy ** 2)
+
     def draw(self):
         if libtcod.map_is_in_fov(fov_map, self.x, self.y):
             libtcod.console_set_default_foreground(con, self.color)
@@ -63,7 +77,12 @@ class Fighter:
 
 class BasicMonster:
     def take_turn(self):
-        print('The ' + self.owner.name + ' growls!')
+        monster = self.owner
+        if libtcod.map_is_in_fov(fov_map, monster.x, monster.y):
+            if monster.distance_to(player) >= 2:
+                monster.move_towards(player.x, player.y)
+            elif player.fighter.hp > 0:
+                print('The attack of the ' + monster.name + ' bounces off your shiny metal armor!')
 
 class Tile:
     def __init__(self, blocked, block_sight = None):
@@ -285,5 +304,5 @@ while not libtcod.console_is_window_closed():
 
     if game_state == 'playing' and player_action != 'didnt-take-turn':
         for object in objects:
-            if object != player and libtcod.map_is_in_fov(fov_map, object.x, object.y):
-                print('The ' + object.name + ' growls!')
+            if object.ai:
+                object.ai.take_turn()
