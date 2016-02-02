@@ -1,5 +1,6 @@
 import libtcodpy as libtcod
 import math
+import textwrap
 
 #init stuff
 SCREEN_WIDTH = 80
@@ -8,6 +9,10 @@ SCREEN_HEIGHT = 50
 PANEL_HEIGHT = 7
 BAR_WIDTH = 20
 PANEL_Y = SCREEN_HEIGHT - PANEL_HEIGHT
+
+MSG_X = BAR_WIDTH + 2
+MSG_WIDTH  = SCREEN_WIDTH - BAR_WIDTH - 2
+MSG_HEIGHT = PANEL_HEIGHT - 1
 
 LIMIT_FPS = 20
 
@@ -98,10 +103,10 @@ class Fighter:
         damage = self.power - target.fighter.defense
 
         if damage > 0:
-            print(self.owner.name.capitalize() + ' attacks ' + target.name + ' for ' + str(damage) + ' hit points.')
+            message(self.owner.name.capitalize() + ' attacks ' + target.name + ' for ' + str(damage) + ' hit points.')
             target.fighter.take_damage(damage)
         else:
-            print(self.owner.name.capitalize() + ' misses ' + target.name)
+            message(self.owner.name.capitalize() + ' misses ' + target.name)
 
 class BasicMonster:
     def take_turn(self):
@@ -186,6 +191,14 @@ def render_bar(x, y, total_width, name, value, maximum, bar_color, back_color):
 
     libtcod.console_set_default_foreground(panel, libtcod.white)
     libtcod.console_print_ex(panel, x + total_width / 2, y, libtcod.BKGND_NONE, libtcod.CENTER, name + ': ' + str(value) + '/' + str(maximum))
+
+def message(new_msg, color = libtcod.white):
+    new_msg_lines = textwrap.wrap(new_msg, MSG_WIDTH)
+
+    for line in new_msg_lines:
+        if len(game_msgs) == MSG_HEIGHT:
+            del(game_msgs[0])
+        game_msgs.append( (line, color) )
 
 def is_blocked(x, y):
     if map[x][y].blocked:
@@ -277,6 +290,12 @@ def render_all():
     libtcod.console_set_default_background(panel, libtcod.black)
     libtcod.console_clear(panel)
 
+    y = 1
+    for (line, color) in game_msgs:
+        libtcod.console_set_default_foreground(panel, color)
+        libtcod.console_print_ex(panel, MSG_X, y, libtcod.BKGND_NONE, libtcod.LEFT, line)
+        y += 1
+
     render_bar(1, 1, BAR_WIDTH, 'HP', player.fighter.hp, player.fighter.max_hp, libtcod.light_red, libtcod.darker_red)
 
     libtcod.console_blit(panel, 0, 0, SCREEN_WIDTH, PANEL_HEIGHT, 0, 0, PANEL_Y)
@@ -300,14 +319,14 @@ def player_attack_or_move(dx, dy):
 
 def player_death(player):
     global game_state
-    print('You died! Your deeds of valor will be remembered!')
+    message('You died! Your deeds of valor will be remembered!')
     game_state = 'dead'
 
     player.char = '%'
     player.color = libtcod.dark_red
 
 def monster_death(monster):
-    print(monster.name.capitalize() + ' leaves a bloody mess!')
+    message(monster.name.capitalize() + ' leaves a bloody mess!')
     monster.char = '%'
     monster.color = libtcod.dark_red
     monster.blocks = False
@@ -355,6 +374,10 @@ fov_recompute = True
 
 game_state = 'playing'
 player_action = None
+
+game_msgs = []
+
+message('Welcome stranger! Prepare to get your ass kicked!', libtcod.red)
 
 #game loop
 while not libtcod.console_is_window_closed():
