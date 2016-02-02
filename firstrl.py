@@ -103,10 +103,10 @@ class Fighter:
         damage = self.power - target.fighter.defense
 
         if damage > 0:
-            message(self.owner.name.capitalize() + ' attacks ' + target.name + ' for ' + str(damage) + ' hit points.')
+            message(self.owner.name.capitalize() + ' attacks ' + target.name + ' for ' + str(damage) + ' hit points.', libtcod.red)
             target.fighter.take_damage(damage)
         else:
-            message(self.owner.name.capitalize() + ' misses ' + target.name)
+            message(self.owner.name.capitalize() + ' misses ' + target.name, libtcod.yellow)
 
 class BasicMonster:
     def take_turn(self):
@@ -319,14 +319,14 @@ def player_attack_or_move(dx, dy):
 
 def player_death(player):
     global game_state
-    message('You died! Your deeds of valor will be remembered!')
+    message('You died! Your deeds of valor will be remembered!', libtcod.light_sky)
     game_state = 'dead'
 
     player.char = '%'
     player.color = libtcod.dark_red
 
 def monster_death(monster):
-    message(monster.name.capitalize() + ' leaves a bloody mess!')
+    message(monster.name.capitalize() + ' leaves a bloody mess!', libtcod.orange)
     monster.char = '%'
     monster.color = libtcod.dark_red
     monster.blocks = False
