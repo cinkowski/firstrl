@@ -298,6 +298,9 @@ def render_all():
 
     render_bar(1, 1, BAR_WIDTH, 'HP', player.fighter.hp, player.fighter.max_hp, libtcod.light_red, libtcod.darker_red)
 
+    libtcod.console_set_default_foreground(panel, libtcod.light_gray)
+    libtcod.console_print_ex(panel, 1, 0, libtcod.BKGND_NONE, libtcod.LEFT, get_names_under_mouse())
+
     libtcod.console_blit(panel, 0, 0, SCREEN_WIDTH, PANEL_HEIGHT, 0, 0, PANEL_Y)
 
 def player_attack_or_move(dx, dy):
@@ -335,22 +338,33 @@ def monster_death(monster):
     monster.name = 'remains of ' + monster.name
     monster.send_to_back()
 
-def handle_keys():
-    global fov_recompute
+def get_names_under_mouse():
+    global mouse
 
-    key = libtcod.console_wait_for_keypress(True)
+    (x, y) = (mouse.cx, mouse.cy)
+
+    names = [obj.name for obj in objects
+            if obj.x == x and obj.y == y and libtcod.map_is_in_fov(fov_map, obj.x, obj.y)]
+
+    names = ', '.join(names)
+    return names.capitalize()
+
+def handle_keys():
+    global fov_recompute, key
+
     if key.vk == libtcod.KEY_F5:
         libtcod.console_set_fullscreen(not libtcod.console_is_fullscreen())
     elif key.vk == libtcod.KEY_ESCAPE:
         return 'exit'
     if game_state == 'playing':
-        if libtcod.console_is_key_pressed(libtcod.KEY_UP):
+        pressed = key.vk
+        if pressed == libtcod.KEY_UP:
             player_attack_or_move(0, -1)
-        elif libtcod.console_is_key_pressed(libtcod.KEY_DOWN):
+        elif pressed == libtcod.KEY_DOWN:
             player_attack_or_move(0, 1)
-        elif libtcod.console_is_key_pressed(libtcod.KEY_LEFT):
+        elif pressed == libtcod.KEY_LEFT:
             player_attack_or_move(-1, 0)
-        elif libtcod.console_is_key_pressed(libtcod.KEY_RIGHT):
+        elif pressed == libtcod.KEY_RIGHT:
             player_attack_or_move(1, 0)
         else:
             return 'didnt-take-turn'
@@ -379,8 +393,12 @@ game_msgs = []
 
 message('Welcome stranger! Prepare to get your ass kicked!', libtcod.red)
 
+mouse = libtcod.Mouse()
+key = libtcod.Key()
+
 #game loop
 while not libtcod.console_is_window_closed():
+    libtcod.sys_check_for_event(libtcod.EVENT_KEY_PRESS|libtcod.EVENT_MOUSE,key,mouse)
     render_all()
 
     libtcod.console_flush()
