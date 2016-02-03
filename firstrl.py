@@ -25,6 +25,7 @@ ROOM_MAX_SIZE = 10
 ROOM_MIN_SIZE = 6
 MAX_ROOMS = 30
 MAX_ROOM_MONSTERS = 3
+MAX_ROOM_ITEMS = 2
 
 #fov
 FOV_ALGO = 0
@@ -43,7 +44,7 @@ panel = libtcod.console_new(SCREEN_WIDTH, PANEL_HEIGHT)
 
 #objects
 class Object:
-    def __init__(self, x, y, char, name, color, blocks=False, fighter = None, ai = None):
+    def __init__(self, x, y, char, name, color, blocks=False, fighter = None, ai = None, item = None):
         self.x = x
         self.y = y
         self.char = char
@@ -57,6 +58,10 @@ class Object:
         self.ai = ai
         if self.ai:
             self.ai.owner = self
+
+        self.item = item
+        if self.item:
+            self.item.owner = self
 
     def move(self, dx, dy):
         if not is_blocked(self.x + dx, self.y + dy):
@@ -148,6 +153,15 @@ class Rect:
         return (self.x1 <= other.x2 and self.x2 >= other.x1 and
                 self.y1 <= other.y2 and self.y2 >= other.y1)
 
+class Item:
+    def pick_up(self):
+        if len(inventory) >= 26:
+            message('Your inventory is full, cannot pick up ' + self.owner.name + '.', libtcod.red)
+        else:
+            inventory.append(self.owner)
+            objects.remove(self.owner)
+            message('You picked up a ' + self.owner.name + '!', libtcod.green)
+
 #map generation
 def create_room(room):
     global map
@@ -173,8 +187,8 @@ def place_objects(room):
     num_monsters = libtcod.random_get_int(0, 0, MAX_ROOM_MONSTERS)
 
     for i in range(num_monsters):
-        x = libtcod.random_get_int(0, room.x1, room.x2)
-        y = libtcod.random_get_int(0, room.y1, room.y2)
+        x = libtcod.random_get_int(0, room.x1+1, room.x2-1)
+        y = libtcod.random_get_int(0, room.y1+1, room.y2-1)
         if not is_blocked(x, y):
             if libtcod.random_get_int(0, 0, 100) < 80:
                 fighter_component = Fighter(hp=10, defense=0, power=3, death_function=monster_death)
@@ -185,6 +199,17 @@ def place_objects(room):
                 ai_component = BasicMonster()
                 monster = Object(x, y, 'T', 'troll', libtcod.darker_green, blocks=True, fighter=fighter_component, ai=ai_component)
             objects.append(monster)
+
+    num_items = libtcod.random_get_int(0, 0, MAX_ROOM_ITEMS)
+
+    for i in range(num_items):
+        x = libtcod.random_get_int(0, room.x1+1, room.x2-1)
+        y = libtcod.random_get_int(0, room.y1+1, room.y2-1)
+        if not is_blocked(x, y):
+            item_component = Item()
+            item = Object(x, y, '!', 'healing potion', libtcod.violet, item=item_component)
+            objects.append(item)
+            item.send_to_back()
 
 def make_map():
     global map
@@ -378,6 +403,14 @@ def handle_keys():
         elif pressed == libtcod.KEY_RIGHT:
             player_attack_or_move(1, 0)
         else:
+            key_char = chr(key.c)
+
+            if key_char == 'e':
+                for object in objects:
+                    if object.x == player.x and object.y == player.y and object.item:
+                        object.item.pick_up()
+                        break
+                        
             return 'didnt-take-turn'
 
 #variables
@@ -402,6 +435,7 @@ game_state = 'playing'
 player_action = None
 
 game_msgs = []
+inventory = []
 
 message('Welcome stranger! Prepare to get your ass kicked!', libtcod.red)
 
