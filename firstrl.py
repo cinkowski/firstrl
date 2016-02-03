@@ -16,6 +16,7 @@ PANEL_Y = SCREEN_HEIGHT - PANEL_HEIGHT
 MSG_X = BAR_WIDTH + 2
 MSG_WIDTH  = SCREEN_WIDTH - BAR_WIDTH - 2
 MSG_HEIGHT = PANEL_HEIGHT - 1
+INVENTORY_WIDTH = 50
 
 #map
 MAP_WIDTH = 80
@@ -278,6 +279,38 @@ def message(new_msg, color = libtcod.white):
             del(game_msgs[0])
         game_msgs.append( (line, color) )
 
+def menu(header, options, width):
+    if len(options) > 26: raise ValueError('Too much options.')
+    header_height = libtcod.console_get_height_rect(con, 0, 0, width, SCREEN_HEIGHT, header)
+    height = len(options) + header_height
+
+    window = libtcod.console_new(width, height)
+
+    libtcod.console_set_default_foreground(window, libtcod.white)
+    libtcod.console_print_rect_ex(window, 0, 0, width, height, libtcod.BKGND_NONE, libtcod.LEFT, header)
+    y = header_height
+    letter = ord('a')
+    for option_text in options:
+        text = '(' + chr(letter) + ') ' + option_text
+        libtcod.console_print_ex(window, 0, y, libtcod.BKGND_NONE, libtcod.LEFT, text)
+        y += 1
+        letter += 1
+
+    x = SCREEN_WIDTH/2 - width/2
+    y = SCREEN_HEIGHT/2 - height/2
+    libtcod.console_blit(window, 0, 0, width, height, 0, x, y, 1.0, 0.7)
+
+    libtcod.console_flush()
+    key = libtcod.console_wait_for_keypress(True)
+
+def inventory_menu(header):
+    if len(inventory) == 0:
+        options = ['Inventory is empty.']
+    else:
+        options = [item.name for item in inventory]
+
+    index = menu(header, options, INVENTORY_WIDTH)
+
 #game behavior and logic
 def player_attack_or_move(dx, dy):
     global fov_recompute
@@ -410,7 +443,10 @@ def handle_keys():
                     if object.x == player.x and object.y == player.y and object.item:
                         object.item.pick_up()
                         break
-                        
+
+            if key_char == 'q':
+                inventory_menu('Press the corresponding key to use item or other to cancel!\n')
+
             return 'didnt-take-turn'
 
 #variables
