@@ -33,6 +33,9 @@ FOV_ALGO = 0
 FOV_LIGHT_WALLS = True
 TORCH_RADIUS = 10
 
+#items
+HEAL_AMOUNT = 4
+
 #colors
 color_dark_wall = libtcod.Color(0, 0, 100)
 color_light_wall = libtcod.Color(130, 110, 50)
@@ -120,6 +123,12 @@ class Fighter:
         else:
             message(self.owner.name.capitalize() + ' misses ' + target.name, libtcod.yellow)
 
+    def heal(self, amount):
+        self.hp += amount
+
+        if self.hp > self.max_hp:
+            self.hp = self.max_hp
+
 class BasicMonster:
     def take_turn(self):
         monster = self.owner
@@ -155,6 +164,8 @@ class Rect:
                 self.y1 <= other.y2 and self.y2 >= other.y1)
 
 class Item:
+    def __init__(self, use_function=None):
+        self.use_function = use_function
     def pick_up(self):
         if len(inventory) >= 26:
             message('Your inventory is full, cannot pick up ' + self.owner.name + '.', libtcod.red)
@@ -162,6 +173,12 @@ class Item:
             inventory.append(self.owner)
             objects.remove(self.owner)
             message('You picked up a ' + self.owner.name + '!', libtcod.green)
+    def use(self):
+        if self.use_function is None:
+            message('The ' + self.owner.name + ' cannot be used.')
+        else:
+            if self.use_function() != 'cancelled':
+                inventory.remove(self.owner)
 
 #map generation
 def create_room(room):
@@ -207,7 +224,7 @@ def place_objects(room):
         x = libtcod.random_get_int(0, room.x1+1, room.x2-1)
         y = libtcod.random_get_int(0, room.y1+1, room.y2-1)
         if not is_blocked(x, y):
-            item_component = Item()
+            item_component = Item(use_function=use_healing_potion)
             item = Object(x, y, '!', 'healing potion', libtcod.violet, item=item_component)
             objects.append(item)
             item.send_to_back()
@@ -356,6 +373,14 @@ def is_blocked(x, y):
             return True
 
     return False
+
+def use_healing_potion():
+    if player.fighter.hp == player.fighter.max_hp:
+        message('You are already at max health.', libtcod.red)
+        return 'cancelled'
+
+    message('You wounds are healed!', libtcod.light_violet)
+    player.fighter.heal(HEAL_AMOUNT)
 
 #render function(s)
 def render_all():
