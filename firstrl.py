@@ -320,6 +320,11 @@ def menu(header, options, width):
     libtcod.console_flush()
     key = libtcod.console_wait_for_keypress(True)
 
+    index = key.c - ord('a')
+    if index >= 0 and index < len(options):
+        return index
+    return None
+
 def inventory_menu(header):
     if len(inventory) == 0:
         options = ['Inventory is empty.']
@@ -327,6 +332,9 @@ def inventory_menu(header):
         options = [item.name for item in inventory]
 
     index = menu(header, options, INVENTORY_WIDTH)
+    if index is None or len(inventory) == 0:
+        return None
+    return inventory[index].item
 
 #game behavior and logic
 def player_attack_or_move(dx, dy):
@@ -470,7 +478,9 @@ def handle_keys():
                         break
 
             if key_char == 'q':
-                inventory_menu('Press the corresponding key to use item or other to cancel!\n')
+                chosen_item = inventory_menu('Press the corresponding key to use item or other to cancel!\n')
+                if chosen_item is not None:
+                    chosen_item.use()
 
             return 'didnt-take-turn'
 
