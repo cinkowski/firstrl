@@ -35,6 +35,8 @@ TORCH_RADIUS = 10
 
 #items
 HEAL_AMOUNT = 4
+LIGHTNING_RANGE = 5
+LIGHTNING_DAMAGE = 20
 
 #colors
 color_dark_wall = libtcod.Color(0, 0, 100)
@@ -224,8 +226,13 @@ def place_objects(room):
         x = libtcod.random_get_int(0, room.x1+1, room.x2-1)
         y = libtcod.random_get_int(0, room.y1+1, room.y2-1)
         if not is_blocked(x, y):
-            item_component = Item(use_function=use_healing_potion)
-            item = Object(x, y, '!', 'healing potion', libtcod.violet, item=item_component)
+            dice = libtcod.random_get_int(0, 0, 100)
+            if dice < 70:
+                item_component = Item(use_function=use_healing_potion)
+                item = Object(x, y, '!', 'healing potion', libtcod.violet, item=item_component)
+            else:
+                item_component = Item(use_function=cast_lightning_bolt)
+                item = Object(x, y, '#', 'scroll of lightning bolt', libtcod.light_yellow, item=item_component)
             objects.append(item)
             item.send_to_back()
 
@@ -389,6 +396,26 @@ def use_healing_potion():
 
     message('You wounds are healed!', libtcod.light_violet)
     player.fighter.heal(HEAL_AMOUNT)
+
+def cast_lightning_bolt():
+    monster = closest_monster(LIGHTNING_RANGE)
+    if monster is None:
+        message('No enemy is close to cast spell on.', libtcod.red)
+        return 'cancelled'
+
+    message('A lightning bolt strikes ' + monster.name + ' for ' + str(LIGHTNING_DAMAGE) + '!', libtcod.light_blue)
+    monster.fighter.take_damage(LIGHTNING_DAMAGE)
+
+def closest_monster(max_range):
+    closest_enemy = None
+    closest_distance = max_range + 1
+    for object in objects:
+        if object.fighter and not object == player and libtcod.map_is_in_fov(fov_map, object.x, object.y):
+            dist = player.distance_to(object)
+            if dist < closest_distance:
+                closest_enemy = object
+                closest_dist = dist
+    return closest_enemy
 
 #render function(s)
 def render_all():
