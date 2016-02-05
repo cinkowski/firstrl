@@ -432,9 +432,9 @@ def cast_lightning_bolt():
     monster.fighter.take_damage(LIGHTNING_DAMAGE)
 
 def cast_confuse():
-    monster = closest_monster(CONFUSE_RANGE)
+    message('Left-click monster to confuse him.', libtcod.light_cyan)
+    monster = target_monster()
     if monster is None:
-        message('No enemy is close to cast spell on.', libtcod.red)
         return 'cancelled'
 
     old_ai = monster.ai
@@ -515,6 +515,16 @@ def render_all():
     libtcod.console_blit(panel, 0, 0, SCREEN_WIDTH, PANEL_HEIGHT, 0, 0, PANEL_Y)
 
 #input
+def target_monster(max_range = None):
+    while True:
+        (x, y) = target_tile(max_range)
+        if x is None:
+            return None
+
+        for object in objects:
+            if object.x == x and object.y == y and object.fighter and object != player:
+                return object
+
 def target_tile(max_range = None):
     global key, mouse
     while True:
