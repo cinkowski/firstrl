@@ -200,6 +200,12 @@ class Item:
         else:
             if self.use_function() != 'cancelled':
                 inventory.remove(self.owner)
+    def drop(self):
+        objects.append(self.owner)
+        inventory.remove(self.owner)
+        self.owner.x = player.x
+        self.owner.y = player.y
+        message('You dropped a ' + self.owner.name + '.', libtcod.yellow)
 
 #map generation
 def create_room(room):
@@ -581,6 +587,11 @@ def handle_keys():
                 chosen_item = inventory_menu('Press the corresponding key to use item or other to cancel!\n')
                 if chosen_item is not None:
                     chosen_item.use()
+
+            if key_char == 'd':
+                chosen_item = inventory_menu('Press the corresponding key to drop item!\n')
+                if chosen_item is not None:
+                    chosen_item.drop()
 
             return 'didnt-take-turn'
 
