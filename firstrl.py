@@ -339,6 +339,8 @@ def message(new_msg, color = libtcod.white):
 def menu(header, options, width):
     if len(options) > 26: raise ValueError('Too much options.')
     header_height = libtcod.console_get_height_rect(con, 0, 0, width, SCREEN_HEIGHT, header)
+    if header == '':
+        header_height = 0
     height = len(options) + header_height
 
     window = libtcod.console_new(width, height)
@@ -360,6 +362,9 @@ def menu(header, options, width):
     libtcod.console_flush()
     key = libtcod.console_wait_for_keypress(True)
 
+    if key.vk == libtcod.KEY_F5:
+        libtcod.console_set_fullscreen(not libtcod.console_is_fullscreen())
+
     index = key.c - ord('a')
     if index >= 0 and index < len(options):
         return index
@@ -375,6 +380,18 @@ def inventory_menu(header):
     if index is None or len(inventory) == 0:
         return None
     return inventory[index].item
+
+def main_menu():
+    while not libtcod.console_is_window_closed():
+        libtcod.console_set_default_foreground(0, libtcod.light_yellow)
+        libtcod.console_print_ex(0, SCREEN_WIDTH/2, SCREEN_HEIGHT/2 - 4, libtcod.BKGND_NONE, libtcod.CENTER, 'ROGUELIKE OF DOOM')
+        choice = menu('', ['New game', 'Continue', 'Quit'], 24)
+
+        if choice == 0:
+            new_game()
+            play_game()
+        elif choice == 2:
+            break
 
 #game behavior and logic
 def player_attack_or_move(dx, dy):
@@ -623,6 +640,8 @@ def initialize_fov():
         for x in range(MAP_WIDTH):
             libtcod.map_set_properties(fov_map, x, y, not map[x][y].block_sight, not map[x][y].blocked)
 
+    libtcod.console_clear(con)
+
 def play_game():
     global key, mouse
 
@@ -652,5 +671,4 @@ def play_game():
 libtcod.console_set_custom_font('arial10x10.png', libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD)
 libtcod.console_init_root(SCREEN_WIDTH, SCREEN_HEIGHT, 'python/libtcod-tutorial', False)
 libtcod.sys_set_fps(LIMIT_FPS)
-new_game()
-play_game()
+main_menu()
