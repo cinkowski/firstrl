@@ -268,7 +268,9 @@ def place_objects(room):
             item.send_to_back()
 
 def make_map():
-    global map
+    global map, objects
+
+    objects = [player]
 
     map = [[ Tile(True)
         for y in range(MAP_HEIGHT) ]
@@ -595,50 +597,60 @@ def handle_keys():
 
             return 'didnt-take-turn'
 
-#variables
+#game initialization
+def new_game():
+    global player, inventory, game_msgs, game_state
+
+    fighter_component = Fighter(hp=30, defense=2, power=5, death_function=player_death)
+    player = Object(0, 0, '@', 'player', libtcod.white, blocks=True, fighter=fighter_component)
+
+    make_map()
+    initialize_fov()
+
+    game_state = 'playing'
+    game_msgs = []
+    inventory = []
+
+    message('Welcome stranger! Prepare to get your ass kicked!', libtcod.red)
+
+def initialize_fov():
+    global fov_map, fov_recompute
+
+    fov_recompute = True
+
+    fov_map = libtcod.map_new(MAP_WIDTH, MAP_HEIGHT)
+    for y in range(MAP_HEIGHT):
+        for x in range(MAP_WIDTH):
+            libtcod.map_set_properties(fov_map, x, y, not map[x][y].block_sight, not map[x][y].blocked)
+
+def play_game():
+    global key, mouse
+
+    mouse = libtcod.Mouse()
+    key = libtcod.Key()
+
+    player_action = None
+
+    while not libtcod.console_is_window_closed():
+        libtcod.sys_check_for_event(libtcod.EVENT_KEY_PRESS|libtcod.EVENT_MOUSE,key,mouse)
+        render_all()
+
+        libtcod.console_flush()
+
+        for object in objects:
+            object.clear()
+
+        player_action = handle_keys()
+        if player_action == 'exit':
+            break
+
+        if game_state == 'playing' and player_action != 'didnt-take-turn':
+            for object in objects:
+                if object.ai:
+                    object.ai.take_turn()
+
 libtcod.console_set_custom_font('arial10x10.png', libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD)
 libtcod.console_init_root(SCREEN_WIDTH, SCREEN_HEIGHT, 'python/libtcod-tutorial', False)
 libtcod.sys_set_fps(LIMIT_FPS)
-
-fighter_component = Fighter(hp=30, defense=2, power=5, death_function=player_death)
-player = Object(0, 0, '@', 'player', libtcod.white, blocks=True, fighter=fighter_component)
-objects = [player]
-
-make_map()
-
-fov_map = libtcod.map_new(MAP_WIDTH, MAP_HEIGHT)
-for y in range(MAP_HEIGHT):
-    for x in range(MAP_WIDTH):
-        libtcod.map_set_properties(fov_map, x, y, not map[x][y].block_sight, not map[x][y].blocked)
-
-fov_recompute = True
-
-game_state = 'playing'
-player_action = None
-
-game_msgs = []
-inventory = []
-
-message('Welcome stranger! Prepare to get your ass kicked!', libtcod.red)
-
-mouse = libtcod.Mouse()
-key = libtcod.Key()
-
-#game loop
-while not libtcod.console_is_window_closed():
-    libtcod.sys_check_for_event(libtcod.EVENT_KEY_PRESS|libtcod.EVENT_MOUSE,key,mouse)
-    render_all()
-
-    libtcod.console_flush()
-
-    for object in objects:
-        object.clear()
-
-    player_action = handle_keys()
-    if player_action == 'exit':
-        break
-
-    if game_state == 'playing' and player_action != 'didnt-take-turn':
-        for object in objects:
-            if object.ai:
-                object.ai.take_turn()
+new_game()
+play_game()
