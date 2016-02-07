@@ -28,8 +28,6 @@ MAP_HEIGHT = 43
 ROOM_MAX_SIZE = 10
 ROOM_MIN_SIZE = 6
 MAX_ROOMS = 30
-MAX_ROOM_MONSTERS = 3
-MAX_ROOM_ITEMS = 2
 
 #fov
 FOV_ALGO = 0
@@ -37,13 +35,13 @@ FOV_LIGHT_WALLS = True
 TORCH_RADIUS = 10
 
 #items
-HEAL_AMOUNT = 4
+HEAL_AMOUNT = 40
 LIGHTNING_RANGE = 5
-LIGHTNING_DAMAGE = 20
+LIGHTNING_DAMAGE = 40
 CONFUSE_DURATION = 10
 CONFUSE_RANGE = 8
 FIREBALL_RADIUS = 3
-FIREBALL_DAMAGE = 12
+FIREBALL_DAMAGE = 25
 
 #xp
 LEVEL_UP_BASE = 200
@@ -256,12 +254,27 @@ def random_choice(chances_dict):
     names = chances_dict.keys()
     return names[random_choice_index(chances)]
 
-def place_objects(room):
-    num_monsters = libtcod.random_get_int(0, 0, MAX_ROOM_MONSTERS)
-    num_items = libtcod.random_get_int(0, 0, MAX_ROOM_ITEMS)
+def from_dungeon_level(table):
+    for (value, level) in reversed(table):
+        if dungeon_level >= level:
+            return value
+    return 0
 
-    monster_chances = {'orc': 80, 'troll': 20}
-    item_chances = {'healing': 70, 'lightning': 10, 'fireball': 10, 'confusion': 10}
+def place_objects(room):
+    max_monsters = from_dungeon_level([[2, 1], [3, 4], [5, 6]])
+    monster_chances = {}
+    monster_chances['orc'] = 80
+    monster_chances['troll'] = from_dungeon_level([[15, 3], [30, 5], [60, 7]])
+
+    max_items = from_dungeon_level([[1, 1], [2, 4]])
+    item_chances = {}
+    item_chances['healing'] = 35
+    item_chances['lightning'] =  from_dungeon_level([[25, 4]])
+    item_chances['fireball'] = from_dungeon_level([[25, 6]])
+    item_chances['confusion'] = from_dungeon_level([[10, 2]])
+
+    num_monsters = libtcod.random_get_int(0, 0, max_monsters)
+    num_items = libtcod.random_get_int(0, 0, max_items)
 
     for i in range(num_monsters):
         x = libtcod.random_get_int(0, room.x1+1, room.x2-1)
@@ -269,11 +282,11 @@ def place_objects(room):
         if not is_blocked(x, y):
             choice = random_choice(monster_chances)
             if choice == 'orc':
-                fighter_component = Fighter(hp=10, defense=0, power=3, xp=35, death_function=monster_death)
+                fighter_component = Fighter(hp=20, defense=0, power=4, xp=35, death_function=monster_death)
                 ai_component = BasicMonster()
                 monster = Object(x, y, 'o', 'orc', libtcod.desaturated_green, blocks=True, fighter=fighter_component, ai=ai_component)
             elif choice == 'troll':
-                fighter_component = Fighter(hp=16, defense=1, power=4, xp=100, death_function=monster_death)
+                fighter_component = Fighter(hp=30, defense=2, power=8, xp=100, death_function=monster_death)
                 ai_component = BasicMonster()
                 monster = Object(x, y, 'T', 'troll', libtcod.darker_green, blocks=True, fighter=fighter_component, ai=ai_component)
             objects.append(monster)
@@ -744,7 +757,7 @@ def new_game():
 
     dungeon_level = 1
 
-    fighter_component = Fighter(hp=30, defense=2, power=5, xp=0, death_function=player_death)
+    fighter_component = Fighter(hp=100, defense=2, power=4, xp=0, death_function=player_death)
     player = Object(0, 0, '@', 'player', libtcod.white, blocks=True, fighter=fighter_component)
 
     player.level = 1
