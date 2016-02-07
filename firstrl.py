@@ -209,6 +209,10 @@ class Item:
             inventory.append(self.owner)
             objects.remove(self.owner)
             message('You picked up a ' + self.owner.name + '!', libtcod.green)
+        equipment = self.owner.equipment
+        if equipment and get_equipped_in_slot(equipment.slot) is None:
+            equipment.equip()
+
     def use(self):
         if self.owner.equipment:
             self.owner.equipment.toggle_equip()
@@ -219,11 +223,14 @@ class Item:
         else:
             if self.use_function() != 'cancelled':
                 inventory.remove(self.owner)
+
     def drop(self):
         objects.append(self.owner)
         inventory.remove(self.owner)
         self.owner.x = player.x
         self.owner.y = player.y
+        if self.owner.equipment:
+            self.owner.equipment.dequip()
         message('You dropped a ' + self.owner.name + '.', libtcod.yellow)
 
 class Equipment:
@@ -238,6 +245,9 @@ class Equipment:
             self.equip()
 
     def equip(self):
+        old_equipment = get_equipped_in_slot(self.slot)
+        if old_equipment is not None:
+            old_equipment.dequip()
         self.is_equipped = True
         message('Equiped ' + self.owner.name + ' on ' + self.slot + '.', libtcod.light_green)
 
@@ -466,7 +476,12 @@ def inventory_menu(header):
     if len(inventory) == 0:
         options = ['Inventory is empty.']
     else:
-        options = [item.name for item in inventory]
+        options = []
+        for item in inventory:
+            text = item.name
+            if item.equipment and item.equipment.is_equipped:
+                text = text + ' (on ' + item.equipment.slot + ')'
+            options.append(text)
 
     index = menu(header, options, INVENTORY_WIDTH)
     if index is None or len(inventory) == 0:
@@ -611,6 +626,12 @@ def check_level_up():
             player.fighter.power += 1
         elif choice == 2:
             player.fighter.defense += 1
+
+def get_equipped_in_slot(slot):
+    for obj in inventory:
+        if obj.equipment and obj.equipment.slot == slot and obj.equipment.is_equipped:
+            return obj.equipment
+    return None
 
 #render function(s)
 def render_all():
