@@ -18,6 +18,8 @@ MSG_X = BAR_WIDTH + 2
 MSG_WIDTH  = SCREEN_WIDTH - BAR_WIDTH - 2
 MSG_HEIGHT = PANEL_HEIGHT - 1
 INVENTORY_WIDTH = 50
+LEVEL_SCREEN_WIDTH = 40
+CHARACTER_SCREEN_WIDTH = 30
 
 #map
 MAP_WIDTH = 80
@@ -42,6 +44,10 @@ CONFUSE_DURATION = 10
 CONFUSE_RANGE = 8
 FIREBALL_RADIUS = 3
 FIREBALL_DAMAGE = 12
+
+#xp
+LEVEL_UP_BASE = 200
+LEVEL_UP_FACTOR = 150
 
 #colors
 color_dark_wall = libtcod.Color(0, 0, 100)
@@ -110,11 +116,12 @@ class Object:
         libtcod.console_put_char(con, self.x, self.y, ' ', libtcod.BKGND_NONE)
 
 class Fighter:
-    def __init__(self, hp, defense, power, death_function = None):
+    def __init__(self, hp, defense, power, xp, death_function = None):
         self.max_hp = hp
         self.hp = hp
         self.defense = defense
         self.power = power
+        self.xp = xp
         self.death_function = death_function
 
     def take_damage(self, damage):
@@ -124,6 +131,8 @@ class Fighter:
                 function = self.death_function
                 if function is not None:
                     function(self.owner)
+                if self.owner != player:
+                    player.fighter.xp += self.xp
 
     def attack(self, target):
         damage = self.power - target.fighter.defense
@@ -238,11 +247,11 @@ def place_objects(room):
         y = libtcod.random_get_int(0, room.y1+1, room.y2-1)
         if not is_blocked(x, y):
             if libtcod.random_get_int(0, 0, 100) < 80:
-                fighter_component = Fighter(hp=10, defense=0, power=3, death_function=monster_death)
+                fighter_component = Fighter(hp=10, defense=0, power=3, xp=35, death_function=monster_death)
                 ai_component = BasicMonster()
                 monster = Object(x, y, 'o', 'orc', libtcod.desaturated_green, blocks=True, fighter=fighter_component, ai=ai_component)
             else:
-                fighter_component = Fighter(hp=16, defense=1, power=4, death_function=monster_death)
+                fighter_component = Fighter(hp=16, defense=1, power=4, xp=100, death_function=monster_death)
                 ai_component = BasicMonster()
                 monster = Object(x, y, 'T', 'troll', libtcod.darker_green, blocks=True, fighter=fighter_component, ai=ai_component)
             objects.append(monster)
@@ -445,7 +454,7 @@ def player_death(player):
     player.color = libtcod.dark_red
 
 def monster_death(monster):
-    message(monster.name.capitalize() + ' leaves a bloody mess!', libtcod.orange)
+    message(monster.name.capitalize() + ' leaves a bloody mess! You gain ' + str(monster.fighter.xp) + ' experience!', libtcod.orange)
     monster.char = '%'
     monster.color = libtcod.dark_red
     monster.blocks = False
@@ -514,6 +523,26 @@ def closest_monster(max_range):
                 closest_enemy = object
                 closest_dist = dist
     return closest_enemy
+
+def check_level_up():
+    level_up_xp = LEVEL_UP_BASE + player.level * LEVEL_UP_FACTOR
+    if player.fighter.xp >= level_up_xp:
+        player.level += 1
+        player.fighter.xp -= level_up_xp
+        message('You feel stronger! You advance to level ' + str(player.level) + '!', libtcod.yellow)
+        choice = None
+        while choice == None:
+            choice = menu('Level up! Choose a stat to increase:\n',
+            ['Stamina (+20 HP)', 'Attack (+1 attack)', 'Defense (+1 defense)'],
+            LEVEL_SCREEN_WIDTH)
+
+        if choice == 0:
+            player.figher.max_hp += 20
+            player.fighter.hp += 20
+        elif choice == 1:
+            player.fighter.power += 1
+        elif choice == 2:
+            player.fighter.defense += 1
 
 #render function(s)
 def render_all():
@@ -612,14 +641,24 @@ def handle_keys():
         return 'exit'
     if game_state == 'playing':
         pressed = key.vk
-        if pressed == libtcod.KEY_UP:
+        if key.vk == libtcod.KEY_UP or key.vk == libtcod.KEY_KP8:
             player_attack_or_move(0, -1)
-        elif pressed == libtcod.KEY_DOWN:
+        elif key.vk == libtcod.KEY_DOWN or key.vk == libtcod.KEY_KP2:
             player_attack_or_move(0, 1)
-        elif pressed == libtcod.KEY_LEFT:
+        elif key.vk == libtcod.KEY_LEFT or key.vk == libtcod.KEY_KP4:
             player_attack_or_move(-1, 0)
-        elif pressed == libtcod.KEY_RIGHT:
+        elif key.vk == libtcod.KEY_RIGHT or key.vk == libtcod.KEY_KP6:
             player_attack_or_move(1, 0)
+        elif key.vk == libtcod.KEY_HOME or key.vk == libtcod.KEY_KP7:
+            player_attack_or_move(-1, -1)
+        elif key.vk == libtcod.KEY_PAGEUP or key.vk == libtcod.KEY_KP9:
+            player_attack_or_move(1, -1)
+        elif key.vk == libtcod.KEY_END or key.vk == libtcod.KEY_KP1:
+            player_attack_or_move(-1, 1)
+        elif key.vk == libtcod.KEY_PAGEDOWN or key.vk == libtcod.KEY_KP3:
+            player_attack_or_move(1, 1)
+        elif key.vk == libtcod.KEY_KP5:
+            pass
         else:
             key_char = chr(key.c)
 
@@ -643,6 +682,11 @@ def handle_keys():
                 if stairs.x == player.x and stairs.y == player.y:
                     print("o")
                     next_level()
+
+            if key_char == 'c':
+                level_up_xp = LEVEL_UP_BASE + player.level * LEVEL_UP_FACTOR
+                msgbox('Character information: \n\nLevel: ' + str(player.level) + '\nExperience: '+ str(player.fighter.xp) + '/' + str(level_up_xp) + '\nAttack: ' +
+                str(player.fighter.power) + '\nDefense: ' + str(player.fighter.defense), CHARACTER_SCREEN_WIDTH)
 
             return 'didnt-take-turn'
 
@@ -680,8 +724,10 @@ def new_game():
 
     dungeon_level = 1
 
-    fighter_component = Fighter(hp=30, defense=2, power=5, death_function=player_death)
+    fighter_component = Fighter(hp=30, defense=2, power=5, xp=0, death_function=player_death)
     player = Object(0, 0, '@', 'player', libtcod.white, blocks=True, fighter=fighter_component)
+
+    player.level = 1
 
     make_map()
     initialize_fov()
@@ -717,6 +763,7 @@ def play_game():
         render_all()
 
         libtcod.console_flush()
+        check_level_up()
 
         for object in objects:
             object.clear()
