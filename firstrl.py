@@ -1,6 +1,7 @@
 import libtcodpy as libtcod
 import math
 import textwrap
+import shelve
 
 #CONSTANTS
 LIMIT_FPS = 20
@@ -381,6 +382,9 @@ def inventory_menu(header):
         return None
     return inventory[index].item
 
+def msgbox(text, width=50):
+    menu(text, [], width)
+
 def main_menu():
     while not libtcod.console_is_window_closed():
         libtcod.console_set_default_foreground(0, libtcod.light_yellow)
@@ -389,6 +393,13 @@ def main_menu():
 
         if choice == 0:
             new_game()
+            play_game()
+        elif choice == 1:
+            try:
+                load_game()
+            except:
+                msgbox('\n No saved game found!\n', 24)
+                continue
             play_game()
         elif choice == 2:
             break
@@ -615,6 +626,30 @@ def handle_keys():
             return 'didnt-take-turn'
 
 #game initialization
+def save_game():
+    file = shelve.open('savegame', 'n')
+    file['map'] = map
+    file['objects'] = objects
+    file['player_index'] = objects.index(player)
+    file['inventory'] = inventory
+    file['game_msgs'] = game_msgs
+    file['game_state'] = game_state
+    file.close()
+
+def load_game():
+    global map, objects, player, inventory, game_msgs, game_state
+
+    file = shelve.open('savegame', 'r')
+    map = file['map']
+    objects = file['objects']
+    player = objects[file['player_index']]
+    inventory = file['inventory']
+    game_msgs = file['game_msgs']
+    game_state = file['game_state']
+    file.close()
+
+    initialize_fov()
+
 def new_game():
     global player, inventory, game_msgs, game_state
 
@@ -661,6 +696,7 @@ def play_game():
 
         player_action = handle_keys()
         if player_action == 'exit':
+            save_game()
             break
 
         if game_state == 'playing' and player_action != 'didnt-take-turn':
